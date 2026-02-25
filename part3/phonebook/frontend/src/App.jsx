@@ -47,6 +47,14 @@ const App = () => {
             setPersons(persons.map(person => person.id !== existingPerson.id ? person : returnedPerson));
             setNewName('');
             setNewNumber('');
+          })
+          .catch(error => {
+            setNotificationMessage(error.response.data.error);
+            setNotificationType('error');
+            setTimeout(() => {
+              setNotificationMessage(null);
+              setNotificationType(null);
+            }, 5000);
           });
       }
     }
@@ -63,6 +71,14 @@ const App = () => {
           setPersons(persons.concat(returnedPerson));
           setNewName('');
           setNewNumber('');
+        })
+        .catch(error => {
+          setNotificationMessage(error.response.data.error);
+          setNotificationType('error');
+          setTimeout(() => {
+            setNotificationMessage(null);
+            setNotificationType(null);
+          }, 5000);
         });
     }
   };
