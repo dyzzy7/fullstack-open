@@ -1,97 +1,46 @@
-const { test, describe } = require('node:test')
+const { test, describe, after, beforeEach } = require('node:test')
 const assert = require('node:assert')
+const supertest = require('supertest')
+const mongoose = require('mongoose')
+const app = require('../app')
 const listHelper = require('../utils/list_helper')
+const helper = require('./test_helper')
+const Blog = require('../models/blog')
+const { url } = require('node:inspector')
 
-const listWithOneBlog = [
-    {
-      _id: '5a422aa71b54a676234d17f8',
-      title: 'Go To Statement Considered Harmful',
-      author: 'Edsger W. Dijkstra',
-      url: 'https://homepages.cwi.nl/~storm/teaching/reader/Dijkstra68.pdf',
-      likes: 5,
-      __v: 0
-    }
-  ]
+const api = supertest(app)
 
-  const listWithMultipleBlogs = [
-    {
-      _id: "5a422a851b54a676234d17f7",
-      title: "React patterns",
-      author: "Michael Chan",
-      url: "https://reactpatterns.com/",
-      likes: 7,
-      __v: 0
-    },
-    {
-      _id: "5a422aa71b54a676234d17f8",
-      title: "Go To Statement Considered Harmful",
-      author: "Edsger W. Dijkstra",
-      url: "http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html",
-      likes: 5,
-      __v: 0
-    },
-    {
-      _id: "5a422b3a1b54a676234d17f9",
-      title: "Canonical string reduction",
-      author: "Edsger W. Dijkstra",
-      url: "http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html",
-      likes: 12,
-      __v: 0
-    },
-    {
-      _id: "5a422b891b54a676234d17fa",
-      title: "First class tests",
-      author: "Robert C. Martin",
-      url: "http://blog.cleancoder.com/uncle-bob/2017/05/05/TestDefinitions.htmll",
-      likes: 10,
-      __v: 0
-    },
-    {
-      _id: "5a422ba71b54a676234d17fb",
-      title: "TDD harms architecture",
-      author: "Robert C. Martin",
-      url: "http://blog.cleancoder.com/uncle-bob/2017/03/03/TDD-Harms-Architecture.html",
-      likes: 0,
-      __v: 0
-    },
-    {
-      _id: "5a422bc61b54a676234d17fc",
-      title: "Type wars",
-      author: "Robert C. Martin",
-      url: "http://blog.cleancoder.com/uncle-bob/2016/05/01/TypeWars.html",
-      likes: 2,
-      __v: 0
-    }  
-  ]
+beforeEach(async () => {
+  await Blog.deleteMany({})
 
-test('dummy returns one', () => {
-  const blogs = []
+  await Blog.insertMany(helper.listWithMultipleBlogs)
+})
 
-  const result = listHelper.dummy(blogs)
-  assert.strictEqual(result, 1)
+after(async () => {
+  await mongoose.connection.close()
 })
 
 describe('total likes', () => {
     test('when list has only one blog, equals the likes of that', () => {
-    const result = listHelper.totalLikes(listWithOneBlog)
+    const result = listHelper.totalLikes(helper.listWithOneBlog)
     assert.strictEqual(result, 5)
   })
 
   test('when list has multiple blogs, equals the sum of their likes', () => {
-    const result = listHelper.totalLikes(listWithMultipleBlogs)
+    const result = listHelper.totalLikes(helper.listWithMultipleBlogs)
     assert.strictEqual(result, 36)
   })
 })
 
 describe('favorite blog', () => {
   test('when list has only one blog, equals that blog', () => {
-    const result = listHelper.favoriteBlog(listWithOneBlog)
-    assert.deepStrictEqual(result, listWithOneBlog[0])
+    const result = listHelper.favoriteBlog(helper.listWithOneBlog)
+    assert.deepStrictEqual(result, helper.listWithOneBlog[0])
   })
 
   test('when list has multiple blogs, equals the blog with most likes', () => {
-    const result = listHelper.favoriteBlog(listWithMultipleBlogs)
-    assert.deepStrictEqual(result, listWithMultipleBlogs[2])
+    const result = listHelper.favoriteBlog(helper.listWithMultipleBlogs)
+    assert.deepStrictEqual(result, helper.listWithMultipleBlogs[2])
   })
 
   test('when list is empty, equals null', () => {
@@ -102,12 +51,12 @@ describe('favorite blog', () => {
 
 describe('most blogs', () => {
   test('when list has only one blog, equals the author of that blog', () => {
-    const result = listHelper.mostBlogs(listWithOneBlog)
+    const result = listHelper.mostBlogs(helper.listWithOneBlog)
     assert.deepStrictEqual(result, { author: 'Edsger W. Dijkstra', blogs: 1 })
   })
 
   test('when list has multiple blogs, equals the author with most blogs', () => {
-    const result = listHelper.mostBlogs(listWithMultipleBlogs)
+    const result = listHelper.mostBlogs(helper.listWithMultipleBlogs)
     assert.deepStrictEqual(result, { author: 'Robert C. Martin', blogs: 3 })
   })
 
@@ -119,17 +68,103 @@ describe('most blogs', () => {
 
 describe('most likes', () => {
   test('when list has only one blog, equals the author of that blog', () => {
-    const result = listHelper.mostLikes(listWithOneBlog)
+    const result = listHelper.mostLikes(helper.listWithOneBlog)
     assert.deepStrictEqual(result, { author: 'Edsger W. Dijkstra', likes: 5 })
   })
 
   test('when list has multiple blogs, equals the author with most likes', () => {
-    const result = listHelper.mostLikes(listWithMultipleBlogs)
+    const result = listHelper.mostLikes(helper.listWithMultipleBlogs)
     assert.deepStrictEqual(result, { author: 'Edsger W. Dijkstra', likes: 17 })
   })
 
   test('when list is empty, equals null', () => {
     const result = listHelper.mostLikes([])
     assert.strictEqual(result, null)
+  })
+})
+
+describe('GET /api/blogs', async () => {
+  test('blogs are returned as json', async () => {
+    const blogs = await api
+      .get('/api/blogs')
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
+    assert.strictEqual(blogs.body.length, helper.listWithMultipleBlogs.length)
+  })
+
+  test('unique identifier property of the blog posts is named id', async () => {
+    const blogs = await api.get('/api/blogs')
+
+    blogs.body.forEach(blog => {
+      assert.ok(blog.id)
+      assert.strictEqual(blog._id, undefined)
+    })
+  })
+})
+
+describe('POST /api/blogs', async () => {
+  test('a valid blog can be added', async () => {
+    const newBlog = {
+      title: 'New Blog',
+      url: 'http://example.com/new-blog',
+    }
+
+    const response = await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
+
+    assert.strictEqual(response.body.title, newBlog.title)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    assert.strictEqual(blogsAtEnd.length, helper.listWithMultipleBlogs.length + 1)
+
+    const titles = blogsAtEnd.map(b => b.title)
+    assert.ok(titles.includes(newBlog.title))
+  })
+
+  test('if likes property is missing, it defaults to 0', async () => {
+    const newBlog = {
+      title: 'Blog without likes',
+      url: 'http://example.com/blog-without-likes',
+    }
+
+    const response = await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
+
+    assert.strictEqual(response.body.likes, 0)
+  })
+
+  test('blog without title is not added', async () => {
+    const newBlog = {
+      url: 'http://example.com/blog-without-title',
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    assert.strictEqual(blogsAtEnd.length, helper.listWithMultipleBlogs.length)
+  })
+
+  test('blog without url is not added', async () => {
+    const newBlog = {
+      title: 'Blog without URL',
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    assert.strictEqual(blogsAtEnd.length, helper.listWithMultipleBlogs.length)
   })
 })
