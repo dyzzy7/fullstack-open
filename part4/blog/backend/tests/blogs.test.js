@@ -168,3 +168,60 @@ describe('POST /api/blogs', async () => {
     assert.strictEqual(blogsAtEnd.length, helper.listWithMultipleBlogs.length)
   })
 })
+
+describe('DELETE /api/blogs/:id', async () => {
+  test('a blog can be deleted', async () => {
+    const blogsAtStart = await helper.blogsInDb()
+    const blogToDelete = blogsAtStart[0]
+
+    await api
+      .delete(`/api/blogs/${blogToDelete.id}`)
+      .expect(204)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    assert.strictEqual(blogsAtEnd.length, helper.listWithMultipleBlogs.length - 1)
+
+    const ids = blogsAtEnd.map(b => b.id)
+    assert.ok(!ids.includes(blogToDelete.id))
+  })
+})
+
+describe('PUT /api/blogs/:id', async () => {
+  test('a blog can be updated', async () => {
+    const blogsAtStart = await helper.blogsInDb()
+    const blogToUpdate = blogsAtStart[0]
+
+    const updatedBlog = {
+      title: 'Updated Title',
+      author: 'Updated Author',
+      url: 'http://example.com/updated-blog',
+      likes: 10
+    }
+
+    await api
+      .put(`/api/blogs/${blogToUpdate.id}`)
+      .send(updatedBlog)
+      .expect(200)
+
+    const blogsAtEnd = await helper.blogsInDb()
+    const updated = blogsAtEnd.find(b => b.id === blogToUpdate.id)
+
+    assert.deepEqual(updated, { ...updatedBlog, id: blogToUpdate.id })
+  })
+  
+  test('updating a non-existing blog returns 404', async () => {
+    const nonExistingId = await helper.nonExistingId()
+
+    const updatedBlog = {
+      title: 'Updated Title',
+      author: 'Updated Author',
+      url: 'http://example.com/updated-blog',
+      likes: 10
+    }
+
+    await api
+      .put(`/api/blogs/${nonExistingId}`)
+      .send(updatedBlog)
+      .expect(404)
+  })
+})
