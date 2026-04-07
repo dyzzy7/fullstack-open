@@ -1,17 +1,9 @@
-const Blog = require('../models/blog')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+const Blog = require('../../models/blog')
+const User = require('../../models/user')
 
-const listWithOneBlog = [
-    {
-      _id: '5a422aa71b54a676234d17f8',
-      title: 'Go To Statement Considered Harmful',
-      author: 'Edsger W. Dijkstra',
-      url: 'https://homepages.cwi.nl/~storm/teaching/reader/Dijkstra68.pdf',
-      likes: 5,
-      __v: 0
-    }
-]
-
-const listWithMultipleBlogs = [
+const initialBlogs = [
     {
         _id: "5a422a851b54a676234d17f7",
         title: "React patterns",
@@ -62,9 +54,29 @@ const listWithMultipleBlogs = [
     }  
 ]
 
+const passwordHash = bcrypt.hashSync('testPassword', 10)
+const initialUser = {
+    name: 'Test User',
+    username: 'testUser',
+    password: passwordHash
+}
+
 const blogsInDb = async () => {
     const blogs = await Blog.find({})
     return blogs.map(blog => blog.toJSON())
+}
+
+const usersInDb = async () => {
+  const users = await User.find({})
+  return users.map(u => u.toJSON())
+}
+
+const getTokenForUser = async (user) => {
+    const userForToken = {
+        username: user.username,
+        id: user.id,
+    }
+    return jwt.sign(userForToken, process.env.SECRET)
 }
 
 const nonExistingId = async () => {
@@ -76,8 +88,10 @@ const nonExistingId = async () => {
 }
 
 module.exports = {
-    listWithOneBlog,
-    listWithMultipleBlogs,
+    initialBlogs,
+    initialUser,
     blogsInDb,
+    usersInDb,
     nonExistingId,
+    getTokenForUser,
 }
