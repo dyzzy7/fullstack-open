@@ -26,10 +26,10 @@ describe('GET /api/users', async () => {
 
     assert.strictEqual(users.body.length, 1)
   })
-  
+
   test('unique identifier property of the user posts is named id', async () => {
     const users = await api.get('/api/users')
-      
+
     users.body.forEach(user => {
       assert.ok(user.id)
     })

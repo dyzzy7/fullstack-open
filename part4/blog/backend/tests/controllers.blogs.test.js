@@ -15,7 +15,7 @@ let token = null
 before(async () => {
   await User.deleteMany({})
   await User.insertOne(helper.initialUser)
-  users = await helper.usersInDb()
+  const users = await helper.usersInDb()
   user = users[0]
   token = await helper.getTokenForUser(user)
 })
@@ -191,12 +191,9 @@ describe('PUT /api/blogs/:id', async () => {
       .put(`/api/blogs/${blogToUpdate.id}`)
       .send(updatedBlog)
 
-    const blogsAtEnd = await helper.blogsInDb()
-    const updated = blogsAtEnd.find(b => b.id === blogToUpdate.id)
-
     assert.deepEqual(result.body, expectedBlog)
   })
-  
+
   test('updating a non-existing blog returns 404', async () => {
     const nonExistingId = await helper.nonExistingId()
 
